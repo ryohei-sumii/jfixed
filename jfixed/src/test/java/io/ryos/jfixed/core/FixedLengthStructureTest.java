@@ -124,6 +124,134 @@ class FixedLengthStructureTest {
         assertNotNull(structure.end);
     }
 
+    @Test
+    void testProcessStructureMultipleTrailers() {
+        List<String> lines = Arrays.asList(
+            "H00120240101",
+            padRight("D001Product A100.50", 20),
+            "T001",
+            "T002",
+            "E"
+        );
+
+        assertThrows(Exception.class, () -> {
+            engine.processStructure(lines, TransactionStructure.class);
+        });
+    }
+
+    @Test
+    void testProcessStructureMultipleEnds() {
+        List<String> lines = Arrays.asList(
+            "H00120240101",
+            padRight("D001Product A100.50", 20),
+            "T001",
+            "E",
+            "E"
+        );
+
+        assertThrows(Exception.class, () -> {
+            engine.processStructure(lines, TransactionStructure.class);
+        });
+    }
+
+    @Test
+    void testProcessStructureUnknownIdentifier() {
+        List<String> lines = Arrays.asList(
+            "H00120240101",
+            padRight("D001Product A100.50", 20),
+            "X001", // Unknown identifier
+            "T001",
+            "E"
+        );
+
+        assertThrows(Exception.class, () -> {
+            engine.processStructure(lines, TransactionStructure.class);
+        });
+    }
+
+    @Test
+    void testProcessStructureMissingTrailer() {
+        List<String> lines = Arrays.asList(
+            "H00120240101",
+            padRight("D001Product A100.50", 20),
+            "E"
+        );
+
+        assertThrows(Exception.class, () -> {
+            engine.processStructure(lines, TransactionStructure.class);
+        });
+    }
+
+    @Test
+    void testProcessStructureMissingEnd() {
+        List<String> lines = Arrays.asList(
+            "H00120240101",
+            padRight("D001Product A100.50", 20),
+            "T001"
+        );
+
+        assertThrows(Exception.class, () -> {
+            engine.processStructure(lines, TransactionStructure.class);
+        });
+    }
+
+    @Test
+    void testProcessStructureNullLines() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            engine.processStructure(null, TransactionStructure.class);
+        });
+    }
+
+    @Test
+    void testProcessStructureEmptyLines() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            engine.processStructure(Arrays.asList(), TransactionStructure.class);
+        });
+    }
+
+    @Test
+    void testProcessStructureNullClass() {
+        List<String> lines = Arrays.asList("H00120240101");
+        assertThrows(IllegalArgumentException.class, () -> {
+            engine.processStructure(lines, null);
+        });
+    }
+
+    @Test
+    void testProcessStructureWithoutAnnotation() {
+        List<String> lines = Arrays.asList("H00120240101");
+        assertThrows(IllegalArgumentException.class, () -> {
+            engine.processStructure(lines, String.class);
+        });
+    }
+
+
+    @Test
+    void testProcessStructureExceptionWrapping() {
+        // Test that exceptions are properly wrapped
+        List<String> lines = Arrays.asList("INVALID_LINE");
+        assertThrows(Exception.class, () -> {
+            engine.processStructure(lines, TransactionStructure.class);
+        });
+    }
+
+    @Test
+    void testProcessStructureWithLongEndLine() throws Exception {
+        // Test extractLineIdentifier with endClass and long line (> 400 bytes)
+        // This tests the special handling for endClass
+        List<String> lines = Arrays.asList(
+            "H00120240101",
+            padRight("D001Product A100.50", 20),
+            "T001",
+            padRight("E", 500) // Long line to test endClass special handling
+        );
+        
+        // Should still work with long end line
+        TransactionStructure structure = engine.processStructure(lines, TransactionStructure.class);
+        assertNotNull(structure);
+    }
+
+
     // Test classes
     @FixedStructure(
         lineIdentifierField = "type"

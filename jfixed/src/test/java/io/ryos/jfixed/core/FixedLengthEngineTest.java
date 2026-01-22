@@ -249,6 +249,33 @@ class FixedLengthEngineTest {
         assertFalse(person.defaultBoolean());
     }
 
+    @Test
+    void testProcessPojoWithoutNoArgsConstructor() throws Exception {
+        // POJO without no-args constructor should fall back to record-style processing
+        String line = "John      Doe       25 ";
+        PersonWithoutNoArgsConstructor person = engine.process(line, PersonWithoutNoArgsConstructor.class, 1);
+
+        assertEquals("John", person.name);
+        assertEquals("Doe", person.surname);
+        assertEquals(25, person.age);
+    }
+
+    @Test
+    void testProcessWithExceptionWrapping() {
+        // Test that non-FixedLengthException exceptions are wrapped
+        String line = "John      Doe       ";
+        // This should cause an exception during processing
+        assertThrows(FixedLengthException.class, () -> engine.process(line, Person.class, 1));
+    }
+
+    @Test
+    void testExtractAndConvertWithException() {
+        // Test extractAndConvert exception handling
+        String line = "John";
+        assertThrows(FixedLengthException.class, () -> engine.process(line, Person.class, 1));
+    }
+
+
     // Test classes
     static class Person {
         @FixedField(offset = 0, length = 10)
@@ -406,4 +433,22 @@ class FixedLengthEngineTest {
             char defaultChar,
             boolean defaultBoolean
     ) {}
+
+    static class PersonWithoutNoArgsConstructor {
+        @FixedField(offset = 0, length = 10)
+        String name;
+
+        @FixedField(offset = 10, length = 10)
+        String surname;
+
+        @FixedField(offset = 20, length = 3)
+        int age;
+
+        // Constructor with parameters - no no-args constructor
+        PersonWithoutNoArgsConstructor(String name, String surname, int age) {
+            this.name = name;
+            this.surname = surname;
+            this.age = age;
+        }
+    }
 }
