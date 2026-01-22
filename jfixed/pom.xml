@@ -25,7 +25,7 @@
         <url>https://github.com/ryohei-sumii/jfixed</url>
         <tag>HEAD</tag>
     </scm>
-    <groupId>org.ryos</groupId>
+    <groupId>io.github.ryohei-sumii</groupId>
     <artifactId>jfixed</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
