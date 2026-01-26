@@ -13,7 +13,30 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * main logic of analyze fixed-text data
+ * Main engine for parsing fixed-length text data.
+ * 
+ * <p>This class provides the core functionality for parsing fixed-length data lines
+ * into Java objects (POJOs or Records) based on field annotations.</p>
+ * 
+ * <p>Basic usage:</p>
+ * <pre>{@code
+ * FixedLengthEngine engine = FixedLengthParser.create();
+ * Person person = engine.process(line, Person.class, 1);
+ * }</pre>
+ * 
+ * <p>For structured data with multiple sections (Header, Data, Trailer, End):</p>
+ * <pre>{@code
+ * List<String> lines = Arrays.asList("H...", "D...", "T...", "E...");
+ * List<Object> result = engine.processStructure(lines, FileStructure.class);
+ * }</pre>
+ * 
+ * <p>The engine supports both POJOs and Java Records. For POJOs, it requires
+ * a no-argument constructor. If no such constructor exists, it falls back to
+ * record-style processing using reflection.</p>
+ * 
+ * @see io.ryos.jfixed.FixedLengthParser
+ * @see io.ryos.jfixed.annotation.FixedField
+ * @see io.ryos.jfixed.annotation.FixedStructure
  */
 public class FixedLengthEngine {
     private final Charset charset;
@@ -36,12 +59,25 @@ public class FixedLengthEngine {
     }
 
     /**
-     * Method wrapping actual processing
-     * @param line string line
-     * @param clazz class of field definition
-     * @param lineNumber number of rows of data
-     * @return instance of clazz
-     * @throws Exception FixedLengthException
+     * Processes a single fixed-length line and converts it to an instance of the specified class.
+     * 
+     * <p>The method extracts fields from the line based on {@code @FixedField} annotations
+     * in the target class and converts them to the appropriate types.</p>
+     * 
+     * <p>Example:</p>
+     * <pre>{@code
+     * String line = "John      Doe       25 ";
+     * Person person = engine.process(line, Person.class, 1);
+     * }</pre>
+     * 
+     * @param <T> the target type
+     * @param line the fixed-length line to parse
+     * @param clazz the target class (POJO or Record)
+     * @param lineNumber the line number (used for error reporting)
+     * @return an instance of the target class populated with data from the line
+     * @throws IllegalArgumentException if line or clazz is null
+     * @throws FixedLengthException if parsing fails (e.g., line too short, invalid format)
+     * @throws Exception if an unexpected error occurs during processing
      */
     public <T> T process(String line, Class<T> clazz, int lineNumber) throws Exception {
         if (line == null) {
@@ -170,10 +206,32 @@ public class FixedLengthEngine {
     /**
      * Processes a structured fixed-length data file with Header, Data (repeatable), Trailer, and End sections.
      * 
+     * <p>This method parses a multi-section fixed-length file structure. The structure class must be
+     * annotated with {@code @FixedStructure} and contain inner classes annotated with {@code @FixedSection}
+     * for each section type.</p>
+     * 
+     * <p>Example structure:</p>
+     * <pre>{@code
+     * @FixedStructure(lineIdentifierField = "type", headerIdentifier = "H", dataIdentifier = "D")
+     * class FileStructure {
+     *     @FixedSection(type = "header")
+     *     static class Header { ... }
+     *     
+     *     @FixedSection(type = "data")
+     *     static class Data { ... }
+     * }
+     * }</pre>
+     * 
+     * <p>The method parses all sections and creates an instance of the structure class
+     * containing the parsed Header, Data records, Trailer, and End sections.</p>
+     * 
+     * @param <T> the structure type
      * @param lines list of lines representing the structure
      * @param structureClass class annotated with @FixedStructure that defines the structure
-     * @return instance of structureClass with parsed data
-     * @throws Exception if processing fails
+     * @return an instance of the structure class containing parsed sections
+     * @throws IllegalArgumentException if lines is null/empty or structureClass is null or not annotated
+     * @throws FixedLengthException if the structure is invalid (e.g., multiple headers, missing sections)
+     * @throws Exception if an unexpected error occurs during processing
      */
     public <T> T processStructure(List<String> lines, Class<T> structureClass) throws Exception {
         if (lines == null || lines.isEmpty()) {
